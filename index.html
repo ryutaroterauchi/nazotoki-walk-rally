@@ -39,6 +39,8 @@
         }
         #return-button {
             transition: opacity 0.5s ease-in-out;
+            /* ボタンが押されたときにブラウザのデフォルト動作を無効化 */
+            touch-action: none;
         }
         .hidden {
             display: none;
@@ -67,7 +69,7 @@
         const returnButton = document.getElementById('return-button');
 
         // バージョン情報を定義
-        const versionInfo = "v3.2";
+        const versionInfo = "v3.4";
 
         // タッチイベントの追跡用変数
         let lastTouchX = null;
@@ -76,7 +78,7 @@
         let lastDirection = null;
         let swipeLeftCount = 0;
         let tapCount = 0;
-        let isSwiping = false; // スワイプ中かどうかを判定するフラグ
+        let isSwiping = false;
         const threshold = 20; // 移動距離の閾値（ピクセル）
         const requiredMovesCircle = 5; // 円を描くのに必要な方向転換回数
         const requiredSwipeLeft = 5; // 右から左へのスワイプ回数
@@ -85,7 +87,7 @@
         // 謎解きの状態管理
         let riddleSolved = false;
         let isActivated = false;
-
+        
         // イベントリスナーのセットアップ関数
         function setupEventListeners() {
             body.addEventListener('touchmove', handleTouchMove);
@@ -106,13 +108,16 @@
             const touch = e.touches[0];
             const currentX = touch.clientX;
             const currentY = touch.clientY;
-            isSwiping = true; // 指が動いている間はスワイプ中と判定
+            
+            // 指が一定距離動いたらスワイプ中と判断
+            if (Math.abs(currentX - lastTouchX) > 5 || Math.abs(currentY - lastTouchY) > 5) {
+                isSwiping = true;
+            }
 
             if (lastTouchX !== null && lastTouchY !== null) {
                 const deltaX = currentX - lastTouchX;
                 const deltaY = currentY - lastTouchY;
 
-                // スワイプロジック
                 let currentDirection = null;
                 if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
                     currentDirection = (deltaX > 0) ? 'right' : 'left';
@@ -124,7 +129,6 @@
                     currentDirection = (deltaY > 0) ? 'down' : 'up';
                 }
                 
-                // 円を描く動作の方向転換カウント
                 if (currentDirection && currentDirection !== lastDirection) {
                     directionCount++;
                     lastDirection = currentDirection;
@@ -135,41 +139,41 @@
             lastTouchX = currentX;
             lastTouchY = currentY;
 
-            // 謎解きA: 円を描く動作の判定
             if (directionCount >= requiredMovesCircle) {
                 activateRiddle('circle');
             }
         }
 
         // touchendイベントのハンドラー
-        function handleTouchEnd() {
+        function handleTouchEnd(e) {
             if (isActivated) return;
 
-            lastTouchX = null;
-            lastTouchY = null;
-
-            // 指が離れたときにスワイプ中フラグをリセット
             if (isSwiping) {
+                // スワイプ操作が完了
                 isSwiping = false;
-                // スワイプが終了したので、ここからタップカウントを始める
+                if (swipeLeftCount >= requiredSwipeLeft) {
+                    // スワイプ回数が規定値に達したら、タップカウントをリセット
+                    // これで、次のタップで謎解きが発動するようになる
+                    tapCount = 0;
+                }
             } else {
-                // スワイプがなかった場合はタップをカウント
+                // タップ操作
                 if (swipeLeftCount >= requiredSwipeLeft) {
                     tapCount++;
                     console.log(`現在のタップ回数: ${tapCount}`);
                     if (tapCount >= requiredTaps) {
                         activateRiddle('swipe_tap');
                     }
-                } else {
-                    // スワイプ回数が足りない場合はリセット
-                    tapCount = 0;
                 }
             }
 
             // 指が離れたらすべてのカウントをリセット
             directionCount = 0;
             lastDirection = null;
-            swipeLeftCount = 0;
+            lastTouchX = null;
+            lastTouchY = null;
+            // touchendではswipeLeftCountをリセットしない
+            // 次のtouchendでtapCountを増やすため
         }
         
         // 謎解き成功時の処理
@@ -178,14 +182,11 @@
             isActivated = true;
             riddleSolved = true;
 
-            // イベントリスナーを削除
             removeEventListeners();
 
-            // 背景色を白から黒へ変更
             body.classList.remove('bg-white');
             body.classList.add('bg-gray-900');
 
-            // メッセージを表示
             messageContainer.classList.add('visible');
             versionInfoElement.textContent = `バージョン: ${versionInfo}`;
             
@@ -204,7 +205,10 @@
         }
 
         // 戻るボタンのイベントリスナー
-        returnButton.addEventListener('click', function() {
+        returnButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            
             // 状態を初期化
             riddleSolved = false;
             isActivated = false;
