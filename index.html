@@ -52,7 +52,7 @@
         let lastTouchY = null;
         let moveCount = 0;
         const threshold = 10; // 移動距離の閾値（ピクセル）
-        const requiredMoves = 4; // 必要ななぞり回数
+        const requiredMoves = 5; // 必要ななぞり回数（5回に変更）
 
         // 指が動いたときのイベントリスナー
         body.addEventListener('touchmove', function(e) {
@@ -67,7 +67,8 @@
                 const deltaY = currentY - lastTouchY;
 
                 // 指が一定距離以上、上下左右に動いたかを検出
-                if (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold) {
+                // これにより、単なるタップや小さな動きではカウントされない
+                if (Math.abs(deltaX) > threshold && Math.abs(deltaY) > threshold) {
                     moveCount++;
                     console.log(`現在のなぞり回数: ${moveCount}`);
                 }
