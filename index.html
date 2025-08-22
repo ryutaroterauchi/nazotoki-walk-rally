@@ -67,15 +67,16 @@
         const returnButton = document.getElementById('return-button');
 
         // バージョン情報を定義
-        const versionInfo = "v3.1";
+        const versionInfo = "v3.2";
 
         // タッチイベントの追跡用変数
         let lastTouchX = null;
         let lastTouchY = null;
         let directionCount = 0;
         let lastDirection = null;
-        let swipeLeftCount = 0; // 下向きスワイプから変更
+        let swipeLeftCount = 0;
         let tapCount = 0;
+        let isSwiping = false; // スワイプ中かどうかを判定するフラグ
         const threshold = 20; // 移動距離の閾値（ピクセル）
         const requiredMovesCircle = 5; // 円を描くのに必要な方向転換回数
         const requiredSwipeLeft = 5; // 右から左へのスワイプ回数
@@ -85,14 +86,27 @@
         let riddleSolved = false;
         let isActivated = false;
 
-        // 指が動いたときのイベントリスナー
-        body.addEventListener('touchmove', function(e) {
-            e.preventDefault(); // 画面のスクロールを防止
+        // イベントリスナーのセットアップ関数
+        function setupEventListeners() {
+            body.addEventListener('touchmove', handleTouchMove);
+            body.addEventListener('touchend', handleTouchEnd);
+        }
+
+        // イベントリスナーの削除関数
+        function removeEventListeners() {
+            body.removeEventListener('touchmove', handleTouchMove);
+            body.removeEventListener('touchend', handleTouchEnd);
+        }
+
+        // touchmoveイベントのハンドラー
+        function handleTouchMove(e) {
+            e.preventDefault();
             if (isActivated) return;
 
             const touch = e.touches[0];
             const currentX = touch.clientX;
             const currentY = touch.clientY;
+            isSwiping = true; // 指が動いている間はスワイプ中と判定
 
             if (lastTouchX !== null && lastTouchY !== null) {
                 const deltaX = currentX - lastTouchX;
@@ -103,7 +117,7 @@
                 if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
                     currentDirection = (deltaX > 0) ? 'right' : 'left';
                     if (currentDirection === 'left') {
-                        swipeLeftCount++; // 右から左へのスワイプをカウント
+                        swipeLeftCount++;
                         console.log(`右から左へのスワイプ回数: ${swipeLeftCount}`);
                     }
                 } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > threshold) {
@@ -125,31 +139,38 @@
             if (directionCount >= requiredMovesCircle) {
                 activateRiddle('circle');
             }
-        });
+        }
 
-        // タップイベントとスワイプ状態のリセット
-        body.addEventListener('touchend', function() {
+        // touchendイベントのハンドラー
+        function handleTouchEnd() {
             if (isActivated) return;
 
             lastTouchX = null;
             lastTouchY = null;
+
+            // 指が離れたときにスワイプ中フラグをリセット
+            if (isSwiping) {
+                isSwiping = false;
+                // スワイプが終了したので、ここからタップカウントを始める
+            } else {
+                // スワイプがなかった場合はタップをカウント
+                if (swipeLeftCount >= requiredSwipeLeft) {
+                    tapCount++;
+                    console.log(`現在のタップ回数: ${tapCount}`);
+                    if (tapCount >= requiredTaps) {
+                        activateRiddle('swipe_tap');
+                    }
+                } else {
+                    // スワイプ回数が足りない場合はリセット
+                    tapCount = 0;
+                }
+            }
+
+            // 指が離れたらすべてのカウントをリセット
             directionCount = 0;
             lastDirection = null;
-
-            // 謎解きB: スワイプとタップの組み合わせ
-            if (swipeLeftCount >= requiredSwipeLeft) { // スワイプ回数が規定値に達した場合
-                tapCount++;
-                console.log(`現在のタップ回数: ${tapCount}`);
-                if (tapCount >= requiredTaps) {
-                    activateRiddle('swipe_tap');
-                }
-            } else {
-                // スワイプが足りない場合はタップカウントをリセット
-                tapCount = 0;
-            }
-            // 指が離れたらスワイプのカウントをリセット
             swipeLeftCount = 0;
-        });
+        }
         
         // 謎解き成功時の処理
         function activateRiddle(riddleType) {
@@ -157,9 +178,8 @@
             isActivated = true;
             riddleSolved = true;
 
-            // イベントリスナーを削除して、一度しか作動しないようにする
-            body.removeEventListener('touchmove', arguments.callee);
-            body.removeEventListener('touchend', arguments.callee);
+            // イベントリスナーを削除
+            removeEventListeners();
 
             // 背景色を白から黒へ変更
             body.classList.remove('bg-white');
@@ -172,14 +192,14 @@
             if (riddleType === 'circle') {
                 mainMessageElement.textContent = "キーワードは「風」です。";
             } else if (riddleType === 'swipe_tap') {
-                mainMessageElement.textContent = "キーワードは「月」です。"; // 新しいキーワードに変更
+                mainMessageElement.textContent = "キーワードは「月」です。";
             }
             
             returnButton.classList.remove('hidden');
 
             // 5秒後に次のページへ遷移
             setTimeout(() => {
-                window.location.href = "https://www.google.com"; // ここを次のURLに変更
+                window.location.href = "https://www.google.com";
             }, 5000);
         }
 
@@ -200,9 +220,11 @@
             returnButton.classList.add('hidden');
             
             // イベントリスナーを再登録
-            body.addEventListener('touchmove', arguments.callee);
-            body.addEventListener('touchend', arguments.callee);
+            setupEventListeners();
         });
+
+        // 最初のイベントリスナー設定
+        setupEventListeners();
 
     </script>
 </body>
