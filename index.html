@@ -67,18 +67,18 @@
         const returnButton = document.getElementById('return-button');
 
         // バージョン情報を定義
-        const versionInfo = "v3.0";
+        const versionInfo = "v3.1";
 
         // タッチイベントの追跡用変数
         let lastTouchX = null;
         let lastTouchY = null;
         let directionCount = 0;
         let lastDirection = null;
-        let swipeDownCount = 0;
+        let swipeLeftCount = 0; // 下向きスワイプから変更
         let tapCount = 0;
         const threshold = 20; // 移動距離の閾値（ピクセル）
         const requiredMovesCircle = 5; // 円を描くのに必要な方向転換回数
-        const requiredSwipeDown = 5; // 下向きスワイプの回数
+        const requiredSwipeLeft = 5; // 右から左へのスワイプ回数
         const requiredTaps = 3; // タップの回数
 
         // 謎解きの状態管理
@@ -102,12 +102,12 @@
                 let currentDirection = null;
                 if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
                     currentDirection = (deltaX > 0) ? 'right' : 'left';
+                    if (currentDirection === 'left') {
+                        swipeLeftCount++; // 右から左へのスワイプをカウント
+                        console.log(`右から左へのスワイプ回数: ${swipeLeftCount}`);
+                    }
                 } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > threshold) {
                     currentDirection = (deltaY > 0) ? 'down' : 'up';
-                    if (currentDirection === 'down') {
-                        swipeDownCount++;
-                        console.log(`下向きスワイプ回数: ${swipeDownCount}`);
-                    }
                 }
                 
                 // 円を描く動作の方向転換カウント
@@ -137,7 +137,7 @@
             lastDirection = null;
 
             // 謎解きB: スワイプとタップの組み合わせ
-            if (swipeDownCount >= requiredSwipeDown) {
+            if (swipeLeftCount >= requiredSwipeLeft) { // スワイプ回数が規定値に達した場合
                 tapCount++;
                 console.log(`現在のタップ回数: ${tapCount}`);
                 if (tapCount >= requiredTaps) {
@@ -147,8 +147,8 @@
                 // スワイプが足りない場合はタップカウントをリセット
                 tapCount = 0;
             }
-            // 指が離れたら下向きスワイプのカウントをリセット
-            swipeDownCount = 0;
+            // 指が離れたらスワイプのカウントをリセット
+            swipeLeftCount = 0;
         });
         
         // 謎解き成功時の処理
@@ -172,7 +172,7 @@
             if (riddleType === 'circle') {
                 mainMessageElement.textContent = "キーワードは「風」です。";
             } else if (riddleType === 'swipe_tap') {
-                mainMessageElement.textContent = "キーワードは「空」です。";
+                mainMessageElement.textContent = "キーワードは「月」です。"; // 新しいキーワードに変更
             }
             
             returnButton.classList.remove('hidden');
@@ -190,7 +190,7 @@
             isActivated = false;
             directionCount = 0;
             lastDirection = null;
-            swipeDownCount = 0;
+            swipeLeftCount = 0;
             tapCount = 0;
             
             // 画面をリセット
