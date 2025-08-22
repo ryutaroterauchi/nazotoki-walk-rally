@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>謎解きウォークラリー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 2s ease-in-out;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        .container {
+            text-align: center;
+            color: white;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            font-size: 1.5rem;
+            max-width: 90%;
+            padding: 2rem;
+        }
+        .visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-white">
+
+    <div id="message-container" class="container">
+        <!-- 謎解き成功後に表示されるメッセージ -->
+        <p>キーワードは「風」です。</p>
+        <p>次の場所へ移動してください。</p>
+    </div>
+
+    <script>
+        // DOM要素と状態変数を取得
+        const body = document.body;
+        const messageContainer = document.getElementById('message-container');
+
+        // タッチイベントの追跡用変数
+        let lastTouchX = null;
+        let lastTouchY = null;
+        let moveCount = 0;
+        const threshold = 10; // 移動距離の閾値（ピクセル）
+        const requiredMoves = 4; // 必要ななぞり回数
+
+        // 指が動いたときのイベントリスナー
+        body.addEventListener('touchmove', function(e) {
+            e.preventDefault(); // 画面のスクロールを防止
+
+            const touch = e.touches[0];
+            const currentX = touch.clientX;
+            const currentY = touch.clientY;
+
+            if (lastTouchX !== null && lastTouchY !== null) {
+                const deltaX = currentX - lastTouchX;
+                const deltaY = currentY - lastTouchY;
+
+                // 指が一定距離以上、上下左右に動いたかを検出
+                if (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold) {
+                    moveCount++;
+                    console.log(`現在のなぞり回数: ${moveCount}`);
+                }
+            }
+            
+            lastTouchX = currentX;
+            lastTouchY = currentY;
+
+            // なぞり回数が規定値を超えたら仕掛けを作動させる
+            if (moveCount >= requiredMoves) {
+                activateRiddle();
+            }
+        });
+
+        // 指が画面から離れたときのイベントリスナー（リセット）
+        body.addEventListener('touchend', function() {
+            lastTouchX = null;
+            lastTouchY = null;
+        });
+
+        // 謎解き成功時の処理
+        function activateRiddle() {
+            // イベントリスナーを削除して、一度しか作動しないようにする
+            body.removeEventListener('touchmove', arguments.callee);
+            body.removeEventListener('touchend', arguments.callee);
+
+            // 背景色を白から黒へ変更
+            body.classList.remove('bg-white');
+            body.classList.add('bg-gray-900');
+
+            // メッセージを表示
+            messageContainer.classList.add('visible');
+
+            // 5秒後に次のページへ遷移
+            setTimeout(() => {
+                window.location.href = "https://www.google.com"; // ここを次のURLに変更
+            }, 5000);
+        }
+
+    </script>
+</body>
+</html>
