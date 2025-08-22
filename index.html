@@ -32,6 +32,11 @@
         .visible {
             opacity: 1;
         }
+        .version {
+            font-size: 0.8rem;
+            color: #6b7280; /* gray-500 */
+            margin-top: 1rem;
+        }
     </style>
 </head>
 <body class="bg-white">
@@ -40,19 +45,25 @@
         <!-- 謎解き成功後に表示されるメッセージ -->
         <p>キーワードは「風」です。</p>
         <p>次の場所へ移動してください。</p>
+        <div id="version-info" class="version"></div>
     </div>
 
     <script>
         // DOM要素と状態変数を取得
         const body = document.body;
         const messageContainer = document.getElementById('message-container');
+        const versionInfoElement = document.getElementById('version-info');
+
+        // バージョン情報を定義
+        const versionInfo = "v2.0";
 
         // タッチイベントの追跡用変数
         let lastTouchX = null;
         let lastTouchY = null;
-        let moveCount = 0;
-        const threshold = 10; // 移動距離の閾値（ピクセル）
-        const requiredMoves = 5; // 必要ななぞり回数（5回に変更）
+        let directionCount = 0;
+        let lastDirection = null;
+        const threshold = 20; // 移動距離の閾値（ピクセル）
+        const requiredMoves = 5; // 必要な方向転換回数
 
         // 指が動いたときのイベントリスナー
         body.addEventListener('touchmove', function(e) {
@@ -66,19 +77,26 @@
                 const deltaX = currentX - lastTouchX;
                 const deltaY = currentY - lastTouchY;
 
-                // 指が一定距離以上、上下左右に動いたかを検出
-                // これにより、単なるタップや小さな動きではカウントされない
-                if (Math.abs(deltaX) > threshold && Math.abs(deltaY) > threshold) {
-                    moveCount++;
-                    console.log(`現在のなぞり回数: ${moveCount}`);
+                let currentDirection = null;
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
+                    currentDirection = (deltaX > 0) ? 'right' : 'left';
+                } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > threshold) {
+                    currentDirection = (deltaY > 0) ? 'down' : 'up';
+                }
+                
+                // 方向が大きく変わった場合にカウント
+                if (currentDirection && currentDirection !== lastDirection) {
+                    directionCount++;
+                    lastDirection = currentDirection;
+                    console.log(`現在の方向転換回数: ${directionCount}`);
                 }
             }
             
             lastTouchX = currentX;
             lastTouchY = currentY;
 
-            // なぞり回数が規定値を超えたら仕掛けを作動させる
-            if (moveCount >= requiredMoves) {
+            // 必要な方向転換回数を超えたら仕掛けを作動させる
+            if (directionCount >= requiredMoves) {
                 activateRiddle();
             }
         });
@@ -87,6 +105,9 @@
         body.addEventListener('touchend', function() {
             lastTouchX = null;
             lastTouchY = null;
+            // 指が離れたら方向のカウントをリセット
+            directionCount = 0;
+            lastDirection = null;
         });
 
         // 謎解き成功時の処理
@@ -101,6 +122,7 @@
 
             // メッセージを表示
             messageContainer.classList.add('visible');
+            versionInfoElement.textContent = `バージョン: ${versionInfo}`;
 
             // 5秒後に次のページへ遷移
             setTimeout(() => {
