@@ -1,0 +1,2 @@
+# nazotoki-walk-rally
+TEST
