@@ -37,37 +37,58 @@
             color: #6b7280; /* gray-500 */
             margin-top: 1rem;
         }
+        #return-button {
+            transition: opacity 0.5s ease-in-out;
+        }
+        .hidden {
+            display: none;
+            opacity: 0;
+        }
     </style>
 </head>
 <body class="bg-white">
 
     <div id="message-container" class="container">
         <!-- 謎解き成功後に表示されるメッセージ -->
-        <p>キーワードは「風」です。</p>
+        <p id="main-message">キーワードは「風」です。</p>
         <p>次の場所へ移動してください。</p>
         <div id="version-info" class="version"></div>
+        <button id="return-button" class="mt-8 px-6 py-3 bg-gray-700 text-white rounded-full shadow-lg hover:bg-gray-600 focus:outline-none hidden">
+            戻る
+        </button>
     </div>
 
     <script>
         // DOM要素と状態変数を取得
         const body = document.body;
         const messageContainer = document.getElementById('message-container');
+        const mainMessageElement = document.getElementById('main-message');
         const versionInfoElement = document.getElementById('version-info');
+        const returnButton = document.getElementById('return-button');
 
         // バージョン情報を定義
-        const versionInfo = "v2.0";
+        const versionInfo = "v3.0";
 
         // タッチイベントの追跡用変数
         let lastTouchX = null;
         let lastTouchY = null;
         let directionCount = 0;
         let lastDirection = null;
+        let swipeDownCount = 0;
+        let tapCount = 0;
         const threshold = 20; // 移動距離の閾値（ピクセル）
-        const requiredMoves = 5; // 必要な方向転換回数
+        const requiredMovesCircle = 5; // 円を描くのに必要な方向転換回数
+        const requiredSwipeDown = 5; // 下向きスワイプの回数
+        const requiredTaps = 3; // タップの回数
+
+        // 謎解きの状態管理
+        let riddleSolved = false;
+        let isActivated = false;
 
         // 指が動いたときのイベントリスナー
         body.addEventListener('touchmove', function(e) {
             e.preventDefault(); // 画面のスクロールを防止
+            if (isActivated) return;
 
             const touch = e.touches[0];
             const currentX = touch.clientX;
@@ -77,14 +98,19 @@
                 const deltaX = currentX - lastTouchX;
                 const deltaY = currentY - lastTouchY;
 
+                // スワイプロジック
                 let currentDirection = null;
                 if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
                     currentDirection = (deltaX > 0) ? 'right' : 'left';
                 } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > threshold) {
                     currentDirection = (deltaY > 0) ? 'down' : 'up';
+                    if (currentDirection === 'down') {
+                        swipeDownCount++;
+                        console.log(`下向きスワイプ回数: ${swipeDownCount}`);
+                    }
                 }
                 
-                // 方向が大きく変わった場合にカウント
+                // 円を描く動作の方向転換カウント
                 if (currentDirection && currentDirection !== lastDirection) {
                     directionCount++;
                     lastDirection = currentDirection;
@@ -95,23 +121,42 @@
             lastTouchX = currentX;
             lastTouchY = currentY;
 
-            // 必要な方向転換回数を超えたら仕掛けを作動させる
-            if (directionCount >= requiredMoves) {
-                activateRiddle();
+            // 謎解きA: 円を描く動作の判定
+            if (directionCount >= requiredMovesCircle) {
+                activateRiddle('circle');
             }
         });
 
-        // 指が画面から離れたときのイベントリスナー（リセット）
+        // タップイベントとスワイプ状態のリセット
         body.addEventListener('touchend', function() {
+            if (isActivated) return;
+
             lastTouchX = null;
             lastTouchY = null;
-            // 指が離れたら方向のカウントをリセット
             directionCount = 0;
             lastDirection = null;
-        });
 
+            // 謎解きB: スワイプとタップの組み合わせ
+            if (swipeDownCount >= requiredSwipeDown) {
+                tapCount++;
+                console.log(`現在のタップ回数: ${tapCount}`);
+                if (tapCount >= requiredTaps) {
+                    activateRiddle('swipe_tap');
+                }
+            } else {
+                // スワイプが足りない場合はタップカウントをリセット
+                tapCount = 0;
+            }
+            // 指が離れたら下向きスワイプのカウントをリセット
+            swipeDownCount = 0;
+        });
+        
         // 謎解き成功時の処理
-        function activateRiddle() {
+        function activateRiddle(riddleType) {
+            if (riddleSolved) return;
+            isActivated = true;
+            riddleSolved = true;
+
             // イベントリスナーを削除して、一度しか作動しないようにする
             body.removeEventListener('touchmove', arguments.callee);
             body.removeEventListener('touchend', arguments.callee);
@@ -123,12 +168,41 @@
             // メッセージを表示
             messageContainer.classList.add('visible');
             versionInfoElement.textContent = `バージョン: ${versionInfo}`;
+            
+            if (riddleType === 'circle') {
+                mainMessageElement.textContent = "キーワードは「風」です。";
+            } else if (riddleType === 'swipe_tap') {
+                mainMessageElement.textContent = "キーワードは「空」です。";
+            }
+            
+            returnButton.classList.remove('hidden');
 
             // 5秒後に次のページへ遷移
             setTimeout(() => {
                 window.location.href = "https://www.google.com"; // ここを次のURLに変更
             }, 5000);
         }
+
+        // 戻るボタンのイベントリスナー
+        returnButton.addEventListener('click', function() {
+            // 状態を初期化
+            riddleSolved = false;
+            isActivated = false;
+            directionCount = 0;
+            lastDirection = null;
+            swipeDownCount = 0;
+            tapCount = 0;
+            
+            // 画面をリセット
+            body.classList.remove('bg-gray-900');
+            body.classList.add('bg-white');
+            messageContainer.classList.remove('visible');
+            returnButton.classList.add('hidden');
+            
+            // イベントリスナーを再登録
+            body.addEventListener('touchmove', arguments.callee);
+            body.addEventListener('touchend', arguments.callee);
+        });
 
     </script>
 </body>
